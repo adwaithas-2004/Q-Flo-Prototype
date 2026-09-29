@@ -111,8 +111,16 @@ fuel system.
 
 ## Team
 
-B.Tech ECE mini project, MBCET (2026), built by a team of five. Maintained by
-[Adwaith A S](https://github.com/adwaithas-2004).
+Built as a B.Tech Electronics and Communication Engineering mini project (2026) at
+Mar Baselios College of Engineering and Technology (MBCET), Thiruvananthapuram, under
+APJ Abdul Kalam Technological University.
+
+- Abhishek D
+- Adwaith A S ([@adwaithas-2004](https://github.com/adwaithas-2004))
+- Aleena Shaji
+- Dhanush S
+
+**Project guide:** Mr. H. Aravind Sarma, Assistant Professor, Department of ECE, MBCET.
 
 ## License
 
