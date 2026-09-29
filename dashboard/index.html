@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Q-FLO Dashboard</title>
+<!--
+  Q-FLO external dashboard (dark). Polls a Q-FLO device's /data endpoint once per second (v1 and v2 firmware).
+  Device address: ?device=192.168.4.1 in the URL, or type it in the header field.
+  Explicit demo with simulated data (clearly labelled): ?demo=1
+  Charts load Chart.js from a CDN; without internet the dashboard still shows live
+  values (use the device's built-in page at http://192.168.4.1 for fully offline use).
+  Open this file locally or serve it over plain HTTP: an HTTPS-hosted page cannot
+  call an http:// device (mixed content).
+-->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#0d0f0e;--bg1:#141716;--bg2:#1c201e;--bg3:#242926;
+  --border:#2a302d;--border2:#333a36;
+  --txt:#e8ede9;--txt2:#7a8c80;--txt3:#4d5c52;
+  --accent:#1D9E75;--accent-dim:#0F6E56;--amber:#EF9F27;--orange:#D85A30;--red:#E24B4A;--violet:#9b6bd8;--grey:#6b7570;
+  --fnt-d:'Syne',system-ui,sans-serif;--fnt-m:'JetBrains Mono',ui-monospace,monospace;
+}
+body{background:var(--bg0);color:var(--txt)}
+.dash{max-width:1100px;margin:0 auto;padding:0 16px 2rem;font-family:var(--fnt-d)}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:1rem 0 1.25rem;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
+.topbar-l{display:flex;align-items:center;gap:12px}
+.logo{width:38px;height:38px;border-radius:9px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--fnt-m);font-size:13px;font-weight:500;color:#fff;letter-spacing:-1px}
+.brand{font-size:18px;font-weight:700;letter-spacing:-0.5px}.brand em{color:var(--accent);font-style:normal}
+.subbrand{font-size:11px;color:var(--txt2);font-family:var(--fnt-m);margin-top:1px}
+.conn-box{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.conn-box input{font-family:var(--fnt-m);font-size:11px;background:var(--bg1);color:var(--txt);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;width:170px}
+.pill{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;border:1px solid var(--border2);font-size:11px;color:var(--txt2);font-family:var(--fnt-m);background:var(--bg1)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--grey)}
+.dot.live{background:var(--accent);animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.demo-banner{display:none;background:#3a2a08;border:1px solid var(--amber);color:#FAC775;border-radius:10px;padding:.6rem 1rem;margin-bottom:1rem;font-family:var(--fnt-m);font-size:12px}
+
+.device-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:.875rem 1.25rem;display:flex;align-items:center;gap:14px;margin-bottom:1.25rem}
+.ava{width:42px;height:42px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#9FE1CB;flex-shrink:0;font-family:var(--fnt-m)}
+.d-name{font-size:14px;font-weight:500}.d-sub{font-size:11px;color:var(--txt2);font-family:var(--fnt-m);margin-top:2px}
+.d-meta{margin-left:auto;text-align:right;font-family:var(--fnt-m);font-size:11px;color:var(--txt2)}
+.d-meta strong{display:block;font-size:12px;color:var(--txt);font-weight:500}
+
+.quality-card{border-radius:12px;padding:1.125rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background .4s,border-color .4s;border:1px solid var(--border)}
+.q-label{font-size:10px;font-family:var(--fnt-m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;opacity:.6}
+.q-status{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.q-desc{font-size:11px;font-family:var(--fnt-m);opacity:.7;margin-top:4px}
+.tier-dots{display:flex;gap:5px}.td{width:10px;height:10px;border-radius:50%;opacity:.2;transition:opacity .4s}.td.active{opacity:1}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+@media(max-width:700px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:.875rem 1rem;position:relative;overflow:hidden}
+.kpi-lbl{font-size:10px;color:var(--txt2);font-family:var(--fnt-m);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:700;line-height:1;font-family:var(--fnt-m)}
+.kpi-unit{font-size:10px;color:var(--txt3);margin-top:5px;font-family:var(--fnt-m)}
+.kpi-bar{position:absolute;bottom:0;left:0;height:2px;width:100%}
+
+.controls{display:flex;gap:8px;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
+.cbtn{font-family:var(--fnt-m);font-size:10px;padding:4px 11px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--txt2);cursor:pointer}
+.cbtn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem}
+@media(max-width:700px){.chart-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem}
+.chart-card.wide{grid-column:1/-1}
+.ct{font-size:10px;font-weight:500;color:var(--txt2);font-family:var(--fnt-m);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.875rem;display:flex;align-items:center;justify-content:space-between}
+.legend,.qual-legend{display:flex;gap:10px;flex-wrap:wrap}
+.leg-item,.ql-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--txt2);font-family:var(--fnt-m)}
+.leg-sq{width:8px;height:8px;border-radius:2px}.ql-dot{width:8px;height:8px;border-radius:50%}
+.qual-legend{margin-top:8px}
+.no-charts{display:none;font-family:var(--fnt-m);font-size:11px;color:var(--txt2);margin-bottom:1rem}
+
+.log-card{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem}
+.log-t{font-size:10px;font-weight:500;color:var(--txt2);font-family:var(--fnt-m);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
+.log-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;font-family:var(--fnt-m)}
+.log-row:last-child{border-bottom:none}
+.log-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.log-time{margin-left:auto;font-size:10px;color:var(--txt3)}
+.footer{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:1rem;border-top:1px solid var(--border);font-size:10px;color:var(--txt3);font-family:var(--fnt-m)}
+</style>
+</head>
+<body>
+<div class="dash">
+
+  <div class="topbar">
+    <div class="topbar-l">
+      <div class="logo">QF</div>
+      <div><div class="brand">Q<em>-FLO</em></div><div class="subbrand">Fuel Quality &amp; Quantity Monitor</div></div>
+    </div>
+    <div class="conn-box">
+      <input id="dev" spellcheck="false" aria-label="Device address" placeholder="192.168.4.1">
+      <button class="cbtn" id="devBtn">Connect</button>
+      <div class="pill"><div class="dot" id="dot"></div><span id="conn">connecting…</span></div>
+    </div>
+  </div>
+
+  <div class="demo-banner" id="demo">DEMO MODE: SIMULATED DATA, NOT A MEASUREMENT. Remove <b>?demo=1</b> from the URL for live data.</div>
+
+  <div class="device-card">
+    <div class="ava">QF</div>
+    <div><div class="d-name" id="d-name">Q-FLO device</div><div class="d-sub" id="d-sub">—</div></div>
+    <div class="d-meta">
+      <span>Refuel</span><strong id="sess">—</strong>
+      <span style="margin-top:6px;display:block">Device uptime</span><strong id="uptime">—</strong>
+    </div>
+  </div>
+
+  <div class="quality-card" id="q-card" style="background:var(--bg2)">
+    <div>
+      <div class="q-label">Fuel quality status</div>
+      <div class="q-status" id="q-status">—</div>
+      <div class="q-desc" id="q-desc">Awaiting first reading…</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+      <div class="tier-dots">
+        <div class="td" id="td0" style="background:var(--accent)"></div><div class="td" id="td1" style="background:var(--amber)"></div>
+        <div class="td" id="td2" style="background:var(--orange)"></div><div class="td" id="td3" style="background:var(--red)"></div>
+      </div>
+      <div style="font-size:10px;font-family:var(--fnt-m);color:var(--txt3)">PURE → HIGHLY ADULTERATED</div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-lbl">Flow rate</div><div class="kpi-val" id="kv-flow">—</div><div class="kpi-unit">L / min</div><div class="kpi-bar" style="background:var(--accent)"></div></div>
+    <div class="kpi"><div class="kpi-lbl">This refuel</div><div class="kpi-val" id="kv-total">—</div><div class="kpi-unit">litres</div><div class="kpi-bar" style="background:#7F77DD"></div></div>
+    <div class="kpi"><div class="kpi-lbl">Sensor frequency</div><div class="kpi-val" id="kv-freq">—</div><div class="kpi-unit">Hz</div><div class="kpi-bar" style="background:#378ADD"></div></div>
+    <div class="kpi"><div class="kpi-lbl">Readings</div><div class="kpi-val" id="kv-reads">0</div><div class="kpi-unit">this refuel</div><div class="kpi-bar" style="background:var(--txt3)"></div></div>
+  </div>
+
+  <div class="controls">
+    <span style="font-family:var(--fnt-m);font-size:10px;color:var(--txt2)">Window:</span>
+    <button class="cbtn" data-w="30">30 s</button><button class="cbtn active" data-w="60">1 min</button><button class="cbtn" data-w="300">5 min</button>
+    <div style="margin-left:auto;font-family:var(--fnt-m);font-size:10px;color:var(--txt2)">↻ every 1 s</div>
+  </div>
+  <div class="no-charts" id="no-charts">Charts need internet access (Chart.js CDN). Live values above still update.</div>
+
+  <div class="chart-grid" id="charts">
+    <div class="chart-card wide">
+      <div class="ct"><span>Sensor frequency: live</span>
+        <div class="legend"><div class="leg-item"><div class="leg-sq" style="background:#378ADD"></div>Frequency (Hz)</div><div class="leg-item"><div class="leg-sq" style="background:rgba(29,158,117,.35)"></div>Pure band</div></div></div>
+      <div style="position:relative;width:100%;height:170px"><canvas id="freqChart" role="img" aria-label="Live sensor frequency with pure band"></canvas></div>
+    </div>
+    <div class="chart-card wide">
+      <div class="ct"><span>Flow rate: live</span><div class="legend"><div class="leg-item"><div class="leg-sq" style="background:#1D9E75"></div>Flow (L/min)</div></div></div>
+      <div style="position:relative;width:100%;height:150px"><canvas id="lineChart" role="img" aria-label="Live flow rate"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="ct"><span>This refuel: quality breakdown</span></div>
+      <div style="position:relative;width:100%;height:130px"><canvas id="qualChart" role="img" aria-label="Quality breakdown of this refuel"></canvas></div>
+      <div class="qual-legend">
+        <div class="ql-item"><div class="ql-dot" style="background:#1D9E75"></div>Pure</div><div class="ql-item"><div class="ql-dot" style="background:#EF9F27"></div>Slight</div>
+        <div class="ql-item"><div class="ql-dot" style="background:#D85A30"></div>Moderate</div><div class="ql-item"><div class="ql-dot" style="background:#E24B4A"></div>High</div>
+        <div class="ql-item"><div class="ql-dot" style="background:#9b6bd8"></div>Sensor error</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="ct">Volume accumulation</div>
+      <div style="position:relative;width:100%;height:150px"><canvas id="totalChart" role="img" aria-label="Litres in this refuel over time"></canvas></div>
+    </div>
+  </div>
+
+  <div class="log-card"><div class="log-t">Event log</div><div id="log-list"></div></div>
+
+  <div class="footer"><span>Q-FLO dashboard</span><span id="last-upd">Last update: —</span></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const params=new URLSearchParams(location.search);
+const DEMO=params.get('demo')==='1';
+const MAX=300;
+let winSize=60,hist={ts:[],freq:[],flow:[],total:[]},band=null;
+let logs=[],reads=0,prev={cls:null,state:null,online:null},local={pure:0,slight:0,moderate:0,high:0,fault:0};
+let freqC,lineC,qualC,totalC;
+
+// Keys come from the v2 API ("class"). v1 firmware only sent labels, so map those too.
+const TIERS={
+  pure:     {idx:0,label:'PURE',bg:'#0d1f17',border:'#1D9E75',txt:'#9FE1CB',dot:'#1D9E75',desc:'Within the calibrated pure-fuel band.'},
+  slight:   {idx:1,label:'SLIGHTLY ADULTERATED',bg:'#1e1608',border:'#EF9F27',txt:'#FAC775',dot:'#EF9F27',desc:'Just above the pure band. Recheck with a fresh sample.'},
+  moderate: {idx:2,label:'MODERATELY ADULTERATED',bg:'#1e1008',border:'#D85A30',txt:'#F0997B',dot:'#D85A30',desc:'Clear deviation from the pure-fuel reference.'},
+  high:     {idx:3,label:'HIGHLY ADULTERATED',bg:'#1e0909',border:'#E24B4A',txt:'#F7C1C1',dot:'#E24B4A',desc:'Large deviation. Do not accept this fuel without a lab check.'},
+  fault:    {idx:-1,label:'SENSOR ERROR',bg:'#1a1224',border:'#9b6bd8',txt:'#d7c2f2',dot:'#9b6bd8',desc:'Reading below the pure band. Check the sensor cell and wiring.'},
+  no_signal:{idx:-1,label:'NO SIGNAL',bg:'#1c201e',border:'#6b7570',txt:'#c9d1cc',dot:'#6b7570',desc:'No 555 signal. Check the timer circuit and connections.'},
+  waiting:  {idx:-1,label:'WAITING FOR FUEL',bg:'#1c201e',border:'#333a36',txt:'#c9d1cc',dot:'#6b7570',desc:'Quality is judged while fuel is flowing.'},
+  offline:  {idx:-1,label:'DEVICE OFFLINE',bg:'#1c201e',border:'#333a36',txt:'#7a8c80',dot:'#6b7570',desc:'No response from the device. Check the address and the Wi-Fi connection.'},
+};
+const V1_LABELS={'PURE PETROL':'pure','PURE FUEL':'pure','PURE':'pure','SLIGHTLY ADULTERATED':'slight','MODERATELY ADULTERATED':'moderate',
+  'ADULTERATED':'moderate','HIGHLY ADULTERATED':'high','SENSOR ERROR':'fault','NO SIGNAL':'no_signal','WAITING FOR FUEL':'waiting'};
+const STATE_TXT={fueling:'in progress',done:'finished',idle:'not started'};
+
+// ---------- device address ----------
+function defaultDevice(){
+  if(params.get('device')) return params.get('device');
+  try{const s=localStorage.getItem('qflo.device');if(s) return s}catch(e){}
+  if(location.protocol==='http:' && location.host) return location.host;  // page served by the device itself
+  return '192.168.4.1';
+}
+let device=defaultDevice();
+const devInput=document.getElementById('dev');devInput.value=device;
+document.getElementById('devBtn').onclick=()=>{device=devInput.value.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+  try{localStorage.setItem('qflo.device',device)}catch(e){};addLog('Connecting to '+device,'#378ADD')};
+function apiUrl(){return 'http://'+device+'/data'}  // v1 and v2 firmware both serve /data
+
+// ---------- helpers ----------
+const $=id=>document.getElementById(id);
+function fmt(x,d){return Number(x).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d})}
+function hms(s){s=Math.max(0,Math.floor(s));return [s/3600|0,(s%3600)/60|0,s%60].map(v=>String(v).padStart(2,'0')).join(':')}
+function addLog(msg,color){logs.unshift({msg,color,t:new Date()});if(logs.length>12)logs.pop();
+  $('log-list').innerHTML=logs.map(l=>`<div class="log-row"><div class="log-dot" style="background:${l.color}"></div><span>${l.msg}</span><span class="log-time">${l.t.toLocaleTimeString()}</span></div>`).join('')}
+document.querySelectorAll('.cbtn[data-w]').forEach(b=>b.onclick=()=>{winSize=+b.dataset.w;document.querySelectorAll('.cbtn[data-w]').forEach(x=>x.classList.remove('active'));b.classList.add('active');redraw()});
+
+function showTier(key){
+  const t=TIERS[key]||TIERS.no_signal,card=$('q-card');
+  card.style.background=t.bg;card.style.borderColor=t.border;card.style.color=t.txt;
+  $('q-status').textContent=t.label;$('q-desc').textContent=t.desc;
+  for(let i=0;i<4;i++) $('td'+i).classList.toggle('active',t.idx>=0&&i<=t.idx);
+}
+function setOnline(on){
+  $('dot').className='dot'+(on?' live':'');$('conn').textContent=DEMO?'DEMO · simulated':on?'LIVE · '+device:'OFFLINE · '+device;
+  if(prev.online!==null&&prev.online!==on) addLog(on?'Connection restored':'Connection lost',on?'#1D9E75':'#E24B4A');
+  prev.online=on;
+}
+
+// ---------- charts ----------
+function initCharts(){
+  if(!window.Chart){$('charts').style.display='none';$('no-charts').style.display='block';return}
+  const grid='rgba(255,255,255,0.06)',txt='#4d5c52',mono={family:'JetBrains Mono',size:10};
+  const tip={backgroundColor:'#1c201e',titleColor:'#e8ede9',bodyColor:'#7a8c80',borderColor:'#2a302d',borderWidth:1,bodyFont:{family:'JetBrains Mono'},titleFont:{family:'JetBrains Mono'}};
+  const line=(el,color,fill,zero)=>new Chart($(el),{type:'line',data:{labels:[],datasets:[{data:[],borderColor:color,backgroundColor:fill,borderWidth:1.5,pointRadius:0,tension:.3,fill:!!fill,spanGaps:false}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:tip},
+      scales:{x:{grid:{color:grid},ticks:{color:txt,font:mono,maxTicksLimit:6,maxRotation:0}},y:{grid:{color:grid},ticks:{color,font:mono},beginAtZero:zero,afterFit:a=>{a.width=Math.max(a.width,48)}}}}});
+  freqC=line('freqChart','#378ADD',null,false);
+  // pure band drawn as two extra flat datasets filled between each other
+  freqC.data.datasets.push({data:[],borderWidth:0,pointRadius:0,fill:false},{data:[],borderWidth:0,pointRadius:0,backgroundColor:'rgba(29,158,117,.18)',fill:'-1'});
+  lineC=line('lineChart','#1D9E75','rgba(29,158,117,.12)',true);
+  totalC=line('totalChart','#7F77DD','rgba(127,119,221,.12)',true);
+  qualC=new Chart($('qualChart'),{type:'doughnut',data:{labels:['Pure','Slight','Moderate','High','Sensor error'],
+    datasets:[{data:[0,0,0,0,0],backgroundColor:['#1D9E75','#EF9F27','#D85A30','#E24B4A','#9b6bd8'],borderWidth:0,borderRadius:3,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',animation:false,plugins:{legend:{display:false},tooltip:tip}}});
+  // Axis widths are measured with whatever font is loaded; re-measure once the web font arrives.
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>[freqC,lineC,totalC].forEach(c=>c&&c.update()));
+}
+function redraw(){
+  if(!freqC) return;
+  const vis=Math.min(winSize,hist.ts.length),sl=a=>a.slice(-vis),labels=sl(hist.ts);
+  freqC.data.labels=labels;freqC.data.datasets[0].data=sl(hist.freq);
+  freqC.data.datasets[1].data=band?labels.map(()=>band[0]):[];freqC.data.datasets[2].data=band?labels.map(()=>band[1]):[];
+  lineC.data.labels=labels;lineC.data.datasets[0].data=sl(hist.flow);
+  totalC.data.labels=labels;totalC.data.datasets[0].data=sl(hist.total);
+  [freqC,lineC,totalC,qualC].forEach(c=>c.update('none'));
+}
+
+// ---------- data ----------
+function normalise(d){
+  const cls=d.class||V1_LABELS[(d.quality||'').toUpperCase()]||'no_signal';
+  return {cls,freq:+d.freq||0,signal:d.signal!==undefined?d.signal:(+d.freq>0),flow:+d.flow||0,total:+d.total||0,state:d.state||null,
+    counts:d.session&&d.session.counts,th:d.th,ap:d.ap,fw:d.fw,uptimeS:d.uptimeS,durationS:d.session&&d.session.durationS,samples:d.session&&d.session.samples};
+}
+function process(d){
+  const ts=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  showTier(d.cls);
+  $('kv-flow').textContent=fmt(d.flow,2);$('kv-total').textContent=fmt(d.total,2);
+  $('kv-freq').textContent=d.signal?fmt(d.freq,0):'—';
+  $('last-upd').textContent='Last update: '+ts;
+  if(d.ap) $('d-name').textContent=d.ap;
+  $('d-sub').textContent=(d.fw?'Firmware '+d.fw+' · ':'')+device;
+  $('sess').textContent=d.state?STATE_TXT[d.state]+(d.durationS?' · '+hms(d.durationS):''):'—';
+  $('uptime').textContent=d.uptimeS!==undefined?hms(d.uptimeS):'—';
+  if(d.th) band=[d.th.pureMin,d.th.pureMax];
+
+  // breakdown: device-side session counts (v2) or local tally (v1)
+  let c=d.counts;
+  if(!c){if(local[d.cls]!==undefined) local[d.cls]++;c=local}
+  reads=d.samples!==undefined?d.samples:reads+1;$('kv-reads').textContent=reads;
+  if(qualC) qualC.data.datasets[0].data=['pure','slight','moderate','high','fault'].map(k=>c[k]||0);
+
+  if(prev.cls!==null&&prev.cls!==d.cls) addLog('Quality: '+TIERS[prev.cls].label+' → '+TIERS[d.cls].label,TIERS[d.cls].dot);
+  if(prev.state!==null&&prev.state!==d.state){
+    if(d.state==='fueling') addLog('Refuel started','#378ADD');
+    if(d.state==='done') addLog('Refuel finished: '+fmt(d.total,2)+' L → '+TIERS[d.cls].label,TIERS[d.cls].dot);
+  }
+  prev.cls=d.cls;prev.state=d.state;
+
+  hist.ts.push(ts);hist.freq.push(d.signal?d.freq:null);hist.flow.push(d.flow);hist.total.push(d.total);
+  if(hist.ts.length>MAX) Object.values(hist).forEach(a=>a.shift());
+  redraw();
+}
+
+// Explicit demo only: never substitute fake data for a failed live request.
+let demoT=0,demoTotal=0;
+function demoData(){
+  demoT++;const fueling=demoT%90<60,flow=fueling?Math.max(0,18+Math.sin(demoT/6)*6+Math.random()*2):0;
+  const freq=34000+Math.sin(demoT/20)*400+Math.random()*150+(demoT%180>120?6500:0);
+  const cls=freq<=35200?'pure':freq<=40200?'slight':'moderate';
+  if(fueling) demoTotal+=flow/60;
+  return {class:cls,freq,signal:true,flow,total:demoTotal,state:fueling?'fueling':'done',th:{pureMin:32800,pureMax:35200},ap:'Q-FLO-DEMO',fw:'demo',uptimeS:demoT};
+}
+async function tick(){
+  if(DEMO){process(normalise(demoData()));setOnline(true);return}
+  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),2500);
+  try{const r=await fetch(apiUrl(),{cache:'no-store',signal:ctl.signal});if(!r.ok) throw new Error(r.status);
+    process(normalise(await r.json()));setOnline(true)}
+  catch(e){setOnline(false);showTier('offline')}
+  finally{clearTimeout(t)}
+}
+
+if(DEMO) $('demo').style.display='block';
+addLog('Dashboard started'+(DEMO?' in DEMO mode':'')+' → '+device,'#1D9E75');
+initCharts();tick();setInterval(tick,1000);
+</script>
+</body>
+</html>

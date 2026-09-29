@@ -1,0 +1,364 @@
+
+<h2 class="sr-only">Q-FLO Dashboard — dark mode, live water quality and flow monitoring</h2>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#0d0f0e;
+  --bg1:#141716;
+  --bg2:#1c201e;
+  --bg3:#242926;
+  --border:#2a302d;
+  --border2:#333a36;
+  --txt:#e8ede9;
+  --txt2:#7a8c80;
+  --txt3:#4d5c52;
+  --accent:#1D9E75;
+  --accent-dim:#0F6E56;
+  --amber:#EF9F27;
+  --orange:#D85A30;
+  --red:#E24B4A;
+  --fnt-d:'Syne',sans-serif;
+  --fnt-m:'JetBrains Mono',monospace;
+}
+body,#root{background:var(--bg0)}
+.dash{padding:0 0 2rem;font-family:var(--fnt-d);background:var(--bg0);color:var(--txt)}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:1rem 0 1.25rem;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
+.topbar-l{display:flex;align-items:center;gap:12px}
+.logo{width:38px;height:38px;border-radius:9px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--fnt-m);font-size:13px;font-weight:500;color:#fff;letter-spacing:-1px}
+.brand{font-size:18px;font-weight:700;color:var(--txt);letter-spacing:-0.5px}
+.brand em{color:var(--accent);font-style:normal}
+.subbrand{font-size:11px;color:var(--txt2);font-family:var(--fnt-m);margin-top:1px}
+.pill{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;border:1px solid var(--border2);font-size:11px;color:var(--txt2);font-family:var(--fnt-m);background:var(--bg1)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.user-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:.875rem 1.25rem;display:flex;align-items:center;gap:14px;margin-bottom:1.25rem}
+.ava{width:42px;height:42px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#9FE1CB;flex-shrink:0;font-family:var(--fnt-m)}
+.u-name{font-size:14px;font-weight:500;color:var(--txt)}
+.u-sub{font-size:11px;color:var(--txt2);font-family:var(--fnt-m);margin-top:2px}
+.u-meta{margin-left:auto;text-align:right;font-family:var(--fnt-m);font-size:11px;color:var(--txt2)}
+.u-meta strong{display:block;font-size:12px;color:var(--txt);font-weight:500}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:.875rem 1rem;position:relative;overflow:hidden}
+.kpi-lbl{font-size:10px;color:var(--txt2);font-family:var(--fnt-m);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:700;color:var(--txt);line-height:1;font-family:var(--fnt-m)}
+.kpi-unit{font-size:10px;color:var(--txt3);margin-top:5px;font-family:var(--fnt-m)}
+.kpi-bar{position:absolute;bottom:0;left:0;height:2px;width:100%}
+
+.quality-card{border-radius:12px;padding:1.125rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;transition:background .4s,border-color .4s;border:1px solid var(--border)}
+.q-label{font-size:10px;font-family:var(--fnt-m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;opacity:.6}
+.q-status{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.q-desc{font-size:11px;font-family:var(--fnt-m);opacity:.6;margin-top:4px}
+.tier-dots{display:flex;gap:5px}
+.td{width:10px;height:10px;border-radius:50%;opacity:.2;transition:opacity .4s}
+.td.active{opacity:1}
+
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem}
+@media(max-width:500px){.chart-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem}
+.chart-card.wide{grid-column:1/-1}
+.ct{font-size:10px;font-weight:500;color:var(--txt2);font-family:var(--fnt-m);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.875rem;display:flex;align-items:center;justify-content:space-between}
+.legend{display:flex;gap:12px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--txt2)}
+.leg-sq{width:8px;height:8px;border-radius:2px}
+
+.log-card{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem}
+.log-t{font-size:10px;font-weight:500;color:var(--txt2);font-family:var(--fnt-m);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
+.log-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--txt);font-family:var(--fnt-m)}
+.log-row:last-child{border-bottom:none}
+.log-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.log-time{margin-left:auto;font-size:10px;color:var(--txt3)}
+
+.controls{display:flex;gap:8px;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
+.cbtn{font-family:var(--fnt-m);font-size:10px;padding:4px 11px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--txt2);cursor:pointer}
+.cbtn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.footer{display:flex;align-items:center;justify-content:space-between;padding-top:1rem;border-top:1px solid var(--border);font-size:10px;color:var(--txt3);font-family:var(--fnt-m)}
+
+.qual-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.ql-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--txt2);font-family:var(--fnt-m)}
+.ql-dot{width:8px;height:8px;border-radius:50%}
+</style>
+
+<div class="dash">
+
+  <div class="topbar">
+    <div class="topbar-l">
+      <div class="logo">QF</div>
+      <div>
+        <div class="brand">Q<em>-FLO</em></div>
+        <div class="subbrand">Water Quality Monitor</div>
+      </div>
+    </div>
+    <div class="pill">
+      <div class="dot" id="dot"></div>
+      <span id="conn">LIVE · 10.50.160.19</span>
+    </div>
+  </div>
+
+  <div class="user-card">
+    <div class="ava">AK</div>
+    <div>
+      <div class="u-name">Arjun Kumar</div>
+      <div class="u-sub">Device: QFLO-004 · Site: Sector 7-B</div>
+    </div>
+    <div class="u-meta">
+      <span>Session</span><strong id="sess">—</strong>
+      <span style="margin-top:6px;display:block">Uptime</span><strong id="uptime">00:00:00</strong>
+    </div>
+  </div>
+
+  <div class="quality-card" id="q-card" style="background:var(--bg2);color:var(--txt)">
+    <div>
+      <div class="q-label">Water Quality Status</div>
+      <div class="q-status" id="q-status">—</div>
+      <div class="q-desc" id="q-desc">Awaiting first reading…</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+      <div class="tier-dots">
+        <div class="td" id="td0" style="background:var(--accent)"></div>
+        <div class="td" id="td1" style="background:var(--amber)"></div>
+        <div class="td" id="td2" style="background:var(--orange)"></div>
+        <div class="td" id="td3" style="background:var(--red)"></div>
+      </div>
+      <div style="font-size:10px;font-family:var(--fnt-m);color:var(--txt3)">PURE → HIGHLY ADULTERATED</div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-lbl">Flow Rate</div>
+      <div class="kpi-val" id="kv-flow">—</div>
+      <div class="kpi-unit">L / min</div>
+      <div class="kpi-bar" style="background:var(--accent)"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Total Volume</div>
+      <div class="kpi-val" id="kv-total">—</div>
+      <div class="kpi-unit">Litres accumulated</div>
+      <div class="kpi-bar" style="background:#7F77DD"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Readings</div>
+      <div class="kpi-val" id="kv-reads">0</div>
+      <div class="kpi-unit">this session</div>
+      <div class="kpi-bar" style="background:#378ADD"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span style="font-family:var(--fnt-m);font-size:10px;color:var(--txt2)">Window:</span>
+    <button class="cbtn" onclick="setW(30,this)">30 s</button>
+    <button class="cbtn active" onclick="setW(60,this)">1 min</button>
+    <button class="cbtn" onclick="setW(300,this)">5 min</button>
+    <div style="margin-left:auto;font-family:var(--fnt-m);font-size:10px;color:var(--txt2)">↻ every 1 s</div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card wide">
+      <div class="ct">
+        <span>Flow Rate — Live</span>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-sq" style="background:#1D9E75"></div>Flow (L/min)</div>
+          <div class="leg-item"><div class="leg-sq" style="background:#7F77DD"></div>Total (L)</div>
+        </div>
+      </div>
+      <div style="position:relative;width:100%;height:170px">
+        <canvas id="lineChart" role="img" aria-label="Live line chart of flow rate">Flow rate over time.</canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="ct">
+        <span>Quality Breakdown</span>
+      </div>
+      <div style="position:relative;width:100%;height:130px">
+        <canvas id="qualChart" role="img" aria-label="Doughnut of quality tier readings">Quality tier distribution.</canvas>
+      </div>
+      <div class="qual-legend">
+        <div class="ql-item"><div class="ql-dot" style="background:#1D9E75"></div>Pure</div>
+        <div class="ql-item"><div class="ql-dot" style="background:#EF9F27"></div>Slight</div>
+        <div class="ql-item"><div class="ql-dot" style="background:#D85A30"></div>Adult.</div>
+        <div class="ql-item"><div class="ql-dot" style="background:#E24B4A"></div>Highly</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="ct">Volume Accumulation</div>
+      <div style="position:relative;width:100%;height:150px">
+        <canvas id="totalChart" role="img" aria-label="Area chart of total volume">Total volume over time.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="log-card">
+    <div class="log-t">Event Log</div>
+    <div id="log-list">
+      <div class="log-row">
+        <div class="log-dot" style="background:var(--accent)"></div>
+        <span>Dashboard initialised — awaiting sensor</span>
+        <span class="log-time" id="init-t">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Q-FLO Monitor v2.0</span>
+    <span id="last-upd">Last update: —</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const MAX=120;
+let winSize=60,hist={ts:[],flow:[],total:[]};
+let qB={'PURE':0,'SLIGHTLY ADULTERATED':0,'ADULTERATED':0,'HIGHLY ADULTERATED':0};
+let logs=[],reads=0,upSecs=0,prevQ=null;
+let lineC,qualC,totalC;
+
+const TIERS=[
+  {key:'PURE',           idx:0,bg:'#0d1f17',border:'#1D9E75',txt:'#9FE1CB',dot:'#1D9E75',desc:'Excellent quality — safe for all use.'},
+  {key:'SLIGHTLY ADULTERATED',idx:1,bg:'#1e1608',border:'#EF9F27',txt:'#FAC775',dot:'#EF9F27',desc:'Minor impurities detected. Monitor closely.'},
+  {key:'ADULTERATED',    idx:2,bg:'#1e1008',border:'#D85A30',txt:'#F0997B',dot:'#D85A30',desc:'Significant contamination. Use with caution.'},
+  {key:'HIGHLY ADULTERATED',idx:3,bg:'#1e0909',border:'#E24B4A',txt:'#F7C1C1',dot:'#E24B4A',desc:'Severe contamination — do not use water.'},
+];
+
+document.getElementById('init-t').textContent=new Date().toLocaleTimeString();
+document.getElementById('sess').textContent=new Date().toLocaleTimeString();
+
+setInterval(()=>{
+  upSecs++;
+  const h=String(Math.floor(upSecs/3600)).padStart(2,'0');
+  const m=String(Math.floor((upSecs%3600)/60)).padStart(2,'0');
+  const s=String(upSecs%60).padStart(2,'0');
+  document.getElementById('uptime').textContent=`${h}:${m}:${s}`;
+},1000);
+
+function setW(w,btn){
+  winSize=w;
+  document.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function addLog(msg,color){
+  logs.unshift({msg,color,t:new Date()});
+  if(logs.length>10) logs.pop();
+  document.getElementById('log-list').innerHTML=logs.map(l=>`
+    <div class="log-row">
+      <div class="log-dot" style="background:${l.color}"></div>
+      <span>${l.msg}</span>
+      <span class="log-time">${l.t.toLocaleTimeString()}</span>
+    </div>`).join('');
+}
+
+function updateQCard(q){
+  const tier=TIERS.find(t=>t.key===q)||TIERS[0];
+  const card=document.getElementById('q-card');
+  card.style.background=tier.bg;
+  card.style.borderColor=tier.border;
+  card.style.color=tier.txt;
+  document.getElementById('q-status').textContent=tier.key;
+  document.getElementById('q-desc').textContent=tier.desc;
+  TIERS.forEach((t,i)=>{
+    const el=document.getElementById('td'+i);
+    el.classList.toggle('active',i<=tier.idx);
+  });
+  if(prevQ!==null&&prevQ!==q) addLog(`Quality: ${prevQ} → ${q}`,tier.dot);
+  prevQ=q;
+}
+
+function initCharts(){
+  const grid='rgba(255,255,255,0.06)';
+  const txt='#4d5c52';
+
+  lineC=new Chart(document.getElementById('lineChart'),{
+    type:'line',
+    data:{labels:[],datasets:[
+      {label:'Flow (L/min)',data:[],borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.12)',borderWidth:1.5,pointRadius:0,tension:.4,fill:true}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c201e',titleColor:'#9FE1CB',bodyColor:'#7a8c80',borderColor:'#2a302d',borderWidth:1,bodyFont:{family:'JetBrains Mono'},titleFont:{family:'JetBrains Mono'}}},
+      scales:{
+        x:{grid:{color:grid},ticks:{color:txt,font:{family:'JetBrains Mono',size:10},maxTicksLimit:6,maxRotation:0}},
+        y:{grid:{color:grid},ticks:{color:'#1D9E75',font:{family:'JetBrains Mono',size:10}},beginAtZero:true}
+      }
+    }
+  });
+
+  qualC=new Chart(document.getElementById('qualChart'),{
+    type:'doughnut',
+    data:{
+      labels:['Pure','Slightly Adulterated','Adulterated','Highly Adulterated'],
+      datasets:[{data:[1,0,0,0],backgroundColor:['#1D9E75','#EF9F27','#D85A30','#E24B4A'],borderWidth:0,borderRadius:3,hoverOffset:4}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',animation:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c201e',titleColor:'#e8ede9',bodyColor:'#7a8c80',borderColor:'#2a302d',borderWidth:1,bodyFont:{family:'JetBrains Mono'},titleFont:{family:'JetBrains Mono'}}}
+    }
+  });
+
+  totalC=new Chart(document.getElementById('totalChart'),{
+    type:'line',
+    data:{labels:[],datasets:[
+      {label:'Total (L)',data:[],borderColor:'#7F77DD',backgroundColor:'rgba(127,119,221,.12)',borderWidth:1.5,pointRadius:0,tension:.4,fill:true}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c201e',titleColor:'#AFA9EC',bodyColor:'#7a8c80',borderColor:'#2a302d',borderWidth:1,bodyFont:{family:'JetBrains Mono'},titleFont:{family:'JetBrains Mono'}}},
+      scales:{
+        x:{grid:{color:grid},ticks:{color:txt,font:{family:'JetBrains Mono',size:10},maxTicksLimit:5,maxRotation:0}},
+        y:{grid:{color:grid},ticks:{color:'#7F77DD',font:{family:'JetBrains Mono',size:10}},beginAtZero:true}
+      }
+    }
+  });
+}
+
+async function getData(){
+  const dot=document.getElementById('dot');
+  const conn=document.getElementById('conn');
+  try{
+    const res=await fetch('http://10.50.160.19/data');
+    if(!res.ok) throw new Error('err');
+    const d=await res.json();
+    process(d);
+    dot.style.background='#1D9E75';
+    conn.textContent='LIVE · 10.50.160.19';
+  }catch(e){
+    dot.style.background='#EF9F27';
+    conn.textContent='DEMO · simulated';
+    const qs=['PURE','SLIGHTLY ADULTERATED','ADULTERATED','HIGHLY ADULTERATED'];
+    const q=qs[Math.floor(Math.random()*4)];
+    const flow=Math.max(0,15+Math.sin(Date.now()/7000)*12+Math.random()*3);
+    const total=(upSecs/60)*flow;
+    process({quality:q,flow:flow.toFixed(2),total:total.toFixed(2)});
+  }
+}
+
+function process(d){
+  const now=new Date();
+  const ts=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  reads++;
+  document.getElementById('kv-reads').textContent=reads;
+  document.getElementById('kv-flow').textContent=Number(d.flow).toFixed(2);
+  document.getElementById('kv-total').textContent=Number(d.total).toFixed(1);
+  document.getElementById('last-upd').textContent='Last update: '+ts;
+  const q=(d.quality||'PURE').toUpperCase();
+  updateQCard(q);
+  if(qB[q]!==undefined) qB[q]++;
+  hist.ts.push(ts); hist.flow.push(Number(d.flow)); hist.total.push(Number(d.total));
+  if(hist.ts.length>MAX){hist.ts.shift();hist.flow.shift();hist.total.shift();}
+  if(Number(d.flow)===0&&reads>3) addLog('Flow stopped — 0.00 L/min','#E24B4A');
+  const vis=Math.min(winSize,hist.ts.length);
+  lineC.data.labels=hist.ts.slice(-vis);
+  lineC.data.datasets[0].data=hist.flow.slice(-vis);
+  lineC.update('none');
+  totalC.data.labels=hist.ts.slice(-vis);
+  totalC.data.datasets[0].data=hist.total.slice(-vis);
+  totalC.update('none');
+  qualC.data.datasets[0].data=TIERS.map(t=>qB[t.key]||0);
+  qualC.update('none');
+}
+
+initCharts();
+getData();
+setInterval(getData,1000);
+</script>

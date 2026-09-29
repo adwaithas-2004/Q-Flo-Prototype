@@ -1,0 +1,24 @@
+# Local Wi-Fi credentials
+secrets.h
+
+# Build output
+build/
+*.bin
+*.elf
+*.map
+*.hex
+
+# KiCad backups, caches and per-user state
+*-backups/
+fp-info-cache
+*.kicad_prl
+*.bak
+*.lck
+_autosave-*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
